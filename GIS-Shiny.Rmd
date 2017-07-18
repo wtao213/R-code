@@ -1,0 +1,149 @@
+---
+title: "Untitled"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(ggplot2)
+library(leaflet)
+library(ggmap)
+library(tidyverse)
+library(shiny)
+library(DT)
+library(forcats)
+library(scales)
+df1<- read.csv("C:/Users/TaoWa/Desktop/by_client_with_sequences.csv")
+
+dff<-
+  df1%>%
+  rename(parents_college=q80)%>%
+  mutate(parents_college=fct_recode(parents_college, 
+                                    "yes" = "1", 
+                                    "no" = "2", 
+                                    "missing" = ".a", 
+                                    "multiple" = ".b" ))%>%
+  rename(gender=q72)%>%
+  mutate(gender=fct_recode(gender, 
+                           "female" = "1", 
+                           "male" = "2", 
+                           "uncertain" = "3",
+                           "missing" = ".a", 
+                           "multiple" = ".b" ))%>%
+  rename(coop=q79)%>%
+  mutate(coop=fct_recode(coop,
+                         "yes" = "1", 
+                         "no" = "2", 
+                         "unknown" = "3",
+                         "missing" = ".a", 
+                         "multiple" = ".b"  ))%>%
+  mutate(useful_skills=fct_recode(q13s,
+                                  "Very Dissatisfied"="1",
+                                  "Dissatisfied"="2",
+                                  "Neither Satisfied nor Dissatisfied"="3",
+                                  "Satisfied"="4",
+                                  "Very Satisfied"="5",
+                                  "missing" = ".a", 
+                                  "multiple" = ".b"))%>%
+  mutate(q13s=fct_recode(q13s,
+                         "Very Dissatisfied"="1",
+                         "Dissatisfied"="2",
+                         "Neither Satisfied nor Dissatisfied"="3",
+                         "Satisfied"="4",
+                         "Very Satisfied"="5",
+                         "missing" = ".a", 
+                         "multiple" = ".b")) %>%
+  mutate(q24s=fct_recode(q24s,
+                         "Very Dissatisfied"="1",
+                         "Dissatisfied"="2",
+                         "Neither Satisfied nor Dissatisfied"="3",
+                         "Satisfied"="4",
+                         "Very Satisfied"="5",
+                         "missing" = ".a", 
+                         "multiple" = ".b"))%>%
+  mutate(q39s=fct_recode(q39s,
+                         "Very Dissatisfied"="1",
+                         "Dissatisfied"="2",
+                         "Neither Satisfied nor Dissatisfied"="3",
+                         "Satisfied"="4",
+                         "Very Satisfied"="5",
+                         "missing" = ".a", 
+                         "multiple" = ".b"))%>%
+  mutate(q49s=fct_recode(q49s,
+                         "Very Dissatisfied"="1",
+                         "Dissatisfied"="2",
+                         "Neither Satisfied nor Dissatisfied"="3",
+                         "Satisfied"="4",
+                         "Very Satisfied"="5",
+                         "missing" = ".a", 
+                         "multiple" = ".b"))
+
+## transfer postal type from integer to character, so that we can use geocode
+dff$postal<-as.character(dff$postal)
+
+## group the data set by postcode, and count the number of each postcode
+loglat <-
+  dff %>%
+  group_by(postal) %>%
+  summarise(count= n())
+
+## delete the 44th observatrion with na in postal
+loglat <- loglat[-44,]
+
+## find the log and lat of each post code
+loglat$cologlat<- geocode(loglat$postal)
+
+```
+
+Column {data-width=200}
+-----------------------------------------------------------------------
+
+### selection bar
+
+```{r selectbar}
+selectInput("var1", 
+                              label = "year selection",
+                              choices = c("13/14", "14/15",
+                                          "15/16"),
+                              selected = "13/14")
+```
+
+Column {data-width=800}
+-----------------------------------------------------------------------
+
+### GIS for client numbers by year
+
+```{r}
+renderLeaflet({
+    
+    
+    if(input$var1 == "13/14") {
+      plot_data <- 
+        dff %>%
+        filter(year == "13/14")
+    } 
+    else if (input$var1 == "14/15") {
+      plot_data <- 
+        dff %>%
+        filter(year == "14/15")
+    }
+    else {
+      plot_data <- 
+        dff %>%
+        filter(year == "15/16")
+    }
+    
+    fulldata <- inner_join( plot_data, loglat, by = "postal")
+ 
+    
+     leaflet(fulldata) %>%
+  addTiles() %>%  # Add default OpenStreetMap map tiles
+  addMarkers(~cologlat[,1], ~cologlat[,2], popup=~postal, label= ~postal, clusterOptions = markerClusterOptions() )  
+})
+```
+
+
