@@ -1,0 +1,217 @@
+---
+title: "KPI Analysis"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(plotly)
+df1<- read.csv("C:/Users/TaoWa/Desktop/by_client_with_sequences.csv")
+
+
+library(shiny)
+
+library(ggplot2)
+library(tidyverse)
+library(DT)
+library(forcats)
+library(scales)
+
+df1$collcode_y<-as.character(paste(df1$collcode,df1$year,sep="_"))
+df1$y_collcode<-as.character(paste(df1$year,df1$collcode,sep="_"))
+
+dff<-
+  df1%>%
+  rename(parents_college=q80)%>%
+  mutate(parents_college=fct_recode(parents_college, 
+                                    "yes" = "1", 
+                                    "no" = "2", 
+                                    "missing" = ".a", 
+                                    "multiple" = ".b" ))%>%
+  rename(gender=q72)%>%
+  mutate(gender=fct_recode(gender, 
+                           "female" = "1", 
+                           "male" = "2", 
+                           "uncertain" = "3",
+                           "missing" = ".a", 
+                           "multiple" = ".b" ))%>%
+  rename(coop=q79)%>%
+  mutate(coop=fct_recode(coop,
+                         "yes" = "1", 
+                         "no" = "2", 
+                         "unknown" = "3",
+                         "missing" = ".a", 
+                         "multiple" = ".b"  ))%>%
+  mutate(useful_skills=fct_recode(q13s,
+                                  "Very Dissatisfied"="1",
+                                  "Dissatisfied"="2",
+                                  "Neither Satisfied nor Dissatisfied"="3",
+                                  "Satisfied"="4",
+                                  "Very Satisfied"="5",
+                                  "missing" = ".a", 
+                                  "multiple" = ".b"))%>%
+  mutate(q13s=fct_recode(q13s,
+                         "Very Dissatisfied"="1",
+                         "Dissatisfied"="2",
+                         "Neither Satisfied nor Dissatisfied"="3",
+                         "Satisfied"="4",
+                         "Very Satisfied"="5",
+                         "missing" = ".a", 
+                         "multiple" = ".b")) %>%
+  mutate(q24s=fct_recode(q24s,
+                         "Very Dissatisfied"="1",
+                         "Dissatisfied"="2",
+                         "Neither Satisfied nor Dissatisfied"="3",
+                         "Satisfied"="4",
+                         "Very Satisfied"="5",
+                         "missing" = ".a", 
+                         "multiple" = ".b"))%>%
+  mutate(q39s=fct_recode(q39s,
+                         "Very Dissatisfied"="1",
+                         "Dissatisfied"="2",
+                         "Neither Satisfied nor Dissatisfied"="3",
+                         "Satisfied"="4",
+                         "Very Satisfied"="5",
+                         "missing" = ".a", 
+                         "multiple" = ".b"))%>%
+  mutate(q49s=fct_recode(q49s,
+                         "Very Dissatisfied"="1",
+                         "Dissatisfied"="2",
+                         "Neither Satisfied nor Dissatisfied"="3",
+                         "Satisfied"="4",
+                         "Very Satisfied"="5",
+                         "missing" = ".a", 
+                         "multiple" = ".b"))
+  
+
+
+g_dff <-
+  dff %>%
+  group_by(collcode, year) %>%
+  mutate(is_satisfied = (q13s %in% c("Satisfied", "Very Satisfied"))) %>%
+  summarise(n = n(),
+            num_satisfied = sum(is_satisfied),
+            pct_satisfied = sum(is_satisfied) / n())%>%
+  mutate(p_satisfied= paste(round(100*pct_satisfied,2),"%",sep=""))
+```
+
+Column {data-width=200}
+-----------------------------------------------------------------------
+
+### sidebar- variable option
+
+```{r}
+selectInput("var1", 
+                              label = "overall question options",
+                              choices = c("overall question 13", "overall question 24",
+                                          "overall question 39","overall question 49"),
+                              selected = "overall question 13")
+    
+selectInput("var2", 
+                              label = "side question options",
+                              choices = c("college code", "parents' education",
+                                          "Co-op" ,"Gender"),
+                              selected = "college code")
+selectInput("var3", 
+                              label = "satisfied question options",
+                              choices = c("satisfied rate", "dissatisfied rate"
+                                          ),
+                              selected = "satisfied rate")
+```
+
+Column {data-width=400}
+-----------------------------------------------------------------------
+
+### Univariate: overall questions distribution
+
+```{r univariate}
+renderPlotly({
+    data <- switch(input$var1,
+                   "overall question 13" = dff$q13s,
+                   "overall question 24" = dff$q24s,
+                   "overall question 39" = dff$q39s,
+                   "overall question 49" = dff$q49s, )
+    
+    ggplot(dff,aes(data))+geom_bar(colour="light blue", fill="light blue") +
+       theme(axis.text.x=element_text(angle=45,hjust=1)) +
+      labs(title= "Figue 1", subtitle="response distribution by year", caption="no obvious changes during 3 years", y="response percentage")
+# plot_ly(x=data,
+#        type="histogram")
+     })
+```
+
+### Overall questions' response by year
+
+```{r variable by year}
+renderPlotly({
+    data <- switch(input$var1,
+                   "overall question 13" = dff$q13s,
+                   "overall question 24" = dff$q24s,
+                   "overall question 39" = dff$q39s,
+                   "overall question 49" = dff$q49s, )
+    
+    data2 <- switch(input$var2,
+                   "college code"      = "collcode",
+                   "parents' education"= "parents_college",
+                   "Co-op" = "coop",
+                   "Gender"= "gender" )
+    
+    ggplot(dff,aes(year,fill=data)) +
+      geom_bar(position="fill") + # plot for year, parents' education)
+      labs(title= "Figure 2", subtitle="response distribution by year", caption="no obvious changes during 3 years", y="response percentage") +
+      theme(legend.position = "bottom")
+  })
+```
+
+
+Column {data-width=400}
+-----------------------------------------------------------------------
+
+### Heatmap: overall questions' satisfied rate by year and another factor
+
+```{r}
+renderPlotly({
+    data <- switch(input$var1,
+                   "overall question 13" = dff$q13s,
+                   "overall question 24" = dff$q24s,
+                   "overall question 39" = dff$q39s,
+                   "overall question 49" = dff$q49s, )
+    
+    data2 <- switch(input$var2,
+                   "college code"      = "collcode",
+                   "parents' education"= "parents_college",
+                   "Co-op" = "coop",
+                   "Gender"= "gender" )
+    
+  g_dff <-
+  dff %>%
+  mutate(is_satisfied = (data %in% c("Satisfied", "Very Satisfied")),
+         not_satisfied = (data %in% c("Dissatisfied", "Very Dissatisfied"))) %>%
+  group_by_(.dots = c(data2, "year") ) %>%
+  summarise(n = n(),
+            num_satisfied = sum(is_satisfied),
+            pct_satisfied = sum(is_satisfied) / n(),
+            num_dsatisfied = sum(not_satisfied),
+            pct_dsatisfied = sum(not_satisfied) / n())%>%
+  mutate(p_satisfied= paste(round(100*pct_satisfied,2),"%",sep=""),
+         p_dsatisfied= paste(round(100*pct_dsatisfied,2),"%",sep=""))
+  
+  data3 <- switch(input$var3,
+                  "satisfied rate"= g_dff$pct_satisfied, 
+                  "dissatisfied rate" = g_dff$pct_dsatisfied
+                   )
+
+  ggplot(g_dff) +
+  aes(year, get(data2)) +
+  geom_tile(aes(fill=data3)) +
+  geom_text(aes(label = percent(round(pct_satisfied, 2)), size = 2)) +
+  scale_fill_gradient(low = "white", high = "coral") +
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  labs(title= "Figure 3", subtitle="Satisfied rate for each college", caption="SENE only have year 13/14, LACI doesn't have year 15/16")
+})
+```
+
