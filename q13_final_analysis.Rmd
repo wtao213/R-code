@@ -1,0 +1,286 @@
+---
+title: "Overall Question 13 Analysis"
+author: "Wanting Tao"
+date: "July 4, 2017"
+output: html_document
+---
+
+```{r setup,include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+filename <- "C:/Users/TaoWa/Desktop/by_client_with_sequences.csv"
+df1<- read.csv("C:/Users/TaoWa/Desktop/by_client_with_sequences.csv")
+
+
+library(ggplot2)
+library(tidyverse)
+library(DT)
+library(forcats)
+library(scales)
+
+df1$collcode_y<-as.character(paste(df1$collcode,df1$year,sep="_"))
+df1$y_collcode<-as.character(paste(df1$year,df1$collcode,sep="_"))
+
+dff<-
+  df1%>%
+  rename(parents_college=q80)%>%
+  mutate(parents_college=fct_recode(parents_college, 
+                                    "yes" = "1", 
+                                    "no" = "2", 
+                                    "missing" = ".a", 
+                                    "multiple" = ".b" ))%>%
+  rename(gender=q72)%>%
+  mutate(gender=fct_recode(gender, 
+                           "female" = "1", 
+                           "male" = "2", 
+                           "uncertain" = "3",
+                           "missing" = ".a", 
+                           "multiple" = ".b" ))%>%
+  rename(coop=q79)%>%
+  mutate(coop=fct_recode(coop,
+                         "yes" = "1", 
+                         "no" = "2", 
+                         "unknown" = "3",
+                         "missing" = ".a", 
+                         "multiple" = ".b"  ))%>%
+  mutate(useful_skills=fct_recode(q13s,
+                         "Very Dissatisfied"="1",
+                         "Dissatisfied"="2",
+                         "Neither Satisfied nor Dissatisfied"="3",
+                         "Satisfied"="4",
+                         "Very Satisfied"="5",
+                         "missing" = ".a", 
+                         "multiple" = ".b"))%>%
+  mutate(q13s=fct_recode(q13s,
+                                  "Very Dissatisfied"="1",
+                                  "Dissatisfied"="2",
+                                  "Neither Satisfied nor Dissatisfied"="3",
+                                  "Satisfied"="4",
+                                  "Very Satisfied"="5",
+                                  "missing" = ".a", 
+                                  "multiple" = ".b"))
+```
+
+## for q13s and year
+
+
+From the overall plot we can see most person responded as Satisfied or Very Satisfied.
+
+Then look at every year's distribution plot, there is no obvious changes.
+
+```{r q13s and year}
+t_q13s <- 
+  table(dff$q13s, dff$year) %>%
+  as.data.frame() %>%
+  rename(q13s = Var1, year = Var2, surveys = Freq) 
+
+s_q13s <- 
+  t_q13s %>%
+  spread(key = year, value = surveys) %>%
+  mutate(total = `13/14` + `14/15` + `15/16`) %>%
+  arrange(desc(total))
+
+#table(dff$q13s) # overall distribution for q13s
+p0<-ggplot(dff,aes(q13s))+geom_bar()# total distubution for q13s
+p0 + theme(axis.text.x=element_text(angle=45,hjust=1))
+
+s_q13s%>%datatable()
+
+ggplot(dff,aes(year,fill=q13s)) +
+  geom_bar(position="fill") + # plot for year, parents' education)
+  labs(title= "Graph 1", subtitle="response distribution by year", caption="no obvious changes during 3 years", y="response percentage")
+```
+
+## college and q13s
+
+The distribution of overall question 13 by college.
+Still, most responses are Satisfied and Very Satisfied. However, some colleges like CONF, NIAG, SHER have relatively high Dissatisfied and Very Dissatisfied rate.
+SENE has highest Satisfy and Very Satisfy rate.
+
+```{r college and q13s}
+# c_q13s<-table(dff$collcode,dff$q13s) #q13s *college
+
+
+c_q13s<-
+  table(dff$collcode,dff$q13s) %>%
+  as.data.frame() %>%
+  rename(collcode =Var1, q13s = Var2)
+
+s_q13s<-
+  c_q13s %>%
+  spread(key=collcode,value=Freq)
+
+
+p3<- 
+  ggplot(dff,aes(x=reorder(collcode,q13s %in% c("Satisfied", "Very Satisfied"),.asc=Ture),fill=q13s)) +
+  geom_bar(position="fill") +  # position adjustments plot for q13s in each college
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  labs(title= "Graph 2", subtitle="college's satisfied rate", caption="order in sum of satisfied and very satisfied",x="college name", y="response percentage")
+
+print(p3)
+
+```
+
+## gender and q13s
+
+The fist plot shows the response rate of overall question 13 by gender. We can see that Females have an obviously higher proportion of Very Satisfied than males, and fewer proportion chosen Neither Satisfied nor Dissatisfied than males.
+
+```{r gender and q13s}
+g_q13s<-table(dff$gender,dff$q13s) #q72*q13s
+
+g_q13s<-
+  table(dff$gender,dff$q13s) %>%
+  as.data.frame() %>%
+  rename(gender = Var1, q13s= Var2)
+
+sg_q13s<-
+  g_q13s %>%
+  spread(key=q13s,value=Freq)
+
+sg_q13s%>%datatable() #table for gender and q13s
+
+ggplot(dff,aes(x=reorder(gender,q13s %in% c("Satisfied", "Very Satisfied"),.desc=Ture),fill=q13s)) +
+  geom_bar(position="fill") +
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  labs(title= "Graph 3", subtitle="Satisfied rate distribution for each gender", caption="female have highest satisfied rate",x="gender")
+
+```
+
+## top 10 trade in year
+
+Trade 620C has highest Very satisfied rate.
+Trade 309A has largest proportion among all trades.
+```{r top 10 trade}
+t_trade <- 
+  table(df1$trade, df1$year) %>%
+  as.data.frame() %>%
+  rename(trade = Var1, year = Var2, surveys = Freq) #dataframe table by trade
+
+
+s_trade <- 
+  t_trade %>%
+  spread(key = year, value = surveys) %>%
+  mutate(total = `13/14` + `14/15` + `15/16`) %>%
+  arrange(desc(total))
+
+slice(s_trade,1:10)%>% datatable() #cut the top 10 trades in total
+
+#subset observations
+top<-c("309A","310S","306A","403A","310T","620C","433A","313A","308A","415A")
+top_data<-filter(dff,trade%in%top)
+
+#do not show
+p1<-
+  ggplot(top_data,aes(q13s,fill=trade)) +
+  geom_bar(position="fill") + # coop distribution by top trades
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  labs(title= "Graph 4", subtitle="Satisfied rate distribution by each trades'proportion", x="overall question's rating", y="trades' proportion" )
+
+
+  
+ggplot(top_data,aes(x=reorder(trade,q13s %in% c("Satisfied", "Very Satisfied"),.desc=Ture),fill=q13s)) +
+  geom_bar(position="fill") + # coop distribution for top trades
+  labs(title= "Graph 4", subtitle="Satisfied rate distribution for each trade", caption="306A have highest satisfied rate",x="gender")
+```
+
+## college and year and q13s
+
+SENE has no response after first year(13/14).LACI has only 2 years'responses.
+The response number of CAMB and SLAW decreasing a lot.
+
+The Very satisifed rate of BORE increase a lot in third year.
+```{r college year q13s,fig.width=10,fig.height=5}
+cy_q13s<-
+  table(dff$collcode_y,dff$q13s)%>%
+  as.data.frame()%>%
+  rename(collcode_y=Var1,q13s=Var2)
+
+cy_q13s%>%datatable()
+
+##create new variable combine year and collcode
+
+
+yc_parents<-
+  table(dff$y_collcode,dff$q13s)%>%
+  as.data.frame()%>%
+  rename(y_collcode=Var1,q13s=Var2)
+
+# college response nubmer change by year
+ggplot(dff,aes(collcode,fill=year)) +
+  geom_bar(position="fill") + 
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  labs(title= "Graph 5", subtitle="colleges response number during 3 years", caption="SENE only have one year record, LACI only have two years' records",x="college code", y="proportion by year")
+
+
+# q13s distribution by college*year and change lable angle
+yc_q13<-
+  ggplot(dff,aes(collcode_y,fill=q13s)) +
+  geom_bar(position="fill") +
+  theme(axis.text.x=element_text(angle=90,hjust=1)) + 
+  labs(title= "Graph 6", subtitle="colleges satisfed rate change during 3 years", caption="",x="college code by year", y="proportion by satisfied rate")
+
+print(yc_q13)
+
+```
+
+## heat map satisfied rate by college and year
+year, college and satisfied rate
+
+SSFL's satisfied rate are increasing during the 3 years, and has the highest satisfied rate among all colleges in 15/16 for 98%.
+
+compare three years records:
+ LACI increase most: from 70% to 95% (increase 25%, but no record on 15/16).
+ CAMB decrease most: from 87% to 65% (decrease 22%).
+ 
+```{r heat map,fig.width=5,fig.height=10}
+g_dff <-
+  dff %>%
+  group_by(collcode, year) %>%
+  mutate(is_satisfied = (q13s %in% c("Satisfied", "Very Satisfied"))) %>%
+  summarise(n = n(),
+            num_satisfied = sum(is_satisfied),
+            pct_satisfied = sum(is_satisfied) / n())%>%
+  mutate(p_satisfied= paste(round(100*pct_satisfied,2),"%",sep=""))
+
+p11<-
+  ggplot(g_dff,aes(year,collcode)) +
+  geom_tile(aes(fill=pct_satisfied)) +
+  geom_text(aes(label = percent(round(pct_satisfied, 2)), size = 2)) +
+  scale_fill_gradient(low = "white", high = "coral") + 
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  labs(title= "Graph 7", subtitle="Satisfied rate for each college", caption="SENE only have year 13/14, LACI doesn't have year 15/16")
+
+
+print(p11)
+```
+
+## heat map dissatisfied rate by college and year
+Dissatisfied rate by college and year:
+Among all records, CONF has higest dissatisfied rate 16% in year 14/15.
+SLAW increase most during 3 years: from 1% to 14% (increase 13%)
+LACI decrease most during 3 years: from 8% to 0%  (decrease 8%, only have two year records)
+
+some colleges have 0% dissatisfied rate at least once during 3 years: NORT, LOYT, LACI, BORE.
+
+
+```{r heat map2,fig.width=5,fig.height=10}
+g_dff <-
+  dff %>%
+  group_by(collcode, year) %>%
+  mutate(not_satisfied = (q13s %in% c("Dissatisfied", "Very Dissatisfied"))) %>%
+  summarise(n = n(),
+            num_dsatisfied = sum(not_satisfied),
+            pct_dsatisfied = sum(not_satisfied) / n())%>%
+  mutate(p_dsatisfied= paste(round(100*pct_dsatisfied,2),"%",sep=""))
+
+p12 <-
+  ggplot(g_dff, aes(year, collcode)) + 
+  geom_tile(aes(fill = pct_dsatisfied)) + 
+  geom_text(aes(label = percent(round(pct_dsatisfied, 2)), size = 2)) + #add label of each cell
+  scale_fill_gradient(low = "white",  high = "coral") +                 #change color
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +            #change lable direction
+  ggtitle("Graph 8") +            #add title
+  labs(subtitle="Dissatisfied rate by college and year", caption="SENE only have year 13/14, LACI doesn't have year 15/16")                           #add caption, but can also add title, x-axis,y-axis
+  
+  
+print(p12)
+```
