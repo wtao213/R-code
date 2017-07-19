@@ -1,5 +1,5 @@
 ---
-title: "Untitled"
+title: "GIS-Shiny"
 output: 
   flexdashboard::flex_dashboard:
     orientation: columns
@@ -9,14 +9,13 @@ runtime: shiny
 
 ```{r setup, include=FALSE}
 library(flexdashboard)
-library(ggplot2)
 library(leaflet)
 library(ggmap)
 library(tidyverse)
 library(shiny)
 library(DT)
 library(forcats)
-library(scales)
+
 df1<- read.csv("C:/Users/TaoWa/Desktop/by_client_with_sequences.csv")
 
 dff<-
@@ -82,6 +81,8 @@ dff<-
                          "missing" = ".a", 
                          "multiple" = ".b"))
 
+
+
 ## transfer postal type from integer to character, so that we can use geocode
 dff$postal<-as.character(dff$postal)
 
@@ -93,6 +94,9 @@ loglat <-
 
 ## delete the 44th observatrion with na in postal
 loglat <- loglat[-44,]
+
+## for testing TODO remove the line below 
+# loglat <- sample_n(loglat, 3)
 
 ## find the log and lat of each post code
 loglat$cologlat<- geocode(loglat$postal)
@@ -110,6 +114,11 @@ selectInput("var1",
                               choices = c("13/14", "14/15",
                                           "15/16"),
                               selected = "13/14")
+
+selectInput("var2",
+                    label= "trade code",
+                    choices = c("309A","310S","306A","403A","310T","620C","433A","313A","308A","415A", "all trades"),
+                    selected = "all trades")
 ```
 
 Column {data-width=800}
@@ -120,7 +129,7 @@ Column {data-width=800}
 ```{r}
 renderLeaflet({
     
-    
+    ## plot_data by year
     if(input$var1 == "13/14") {
       plot_data <- 
         dff %>%
@@ -136,13 +145,28 @@ renderLeaflet({
         dff %>%
         filter(year == "15/16")
     }
-    
+  
+  # (input$var2)
+  # plot_data by top 10 trades
+   # if (TRUE) {
+   if ( input$var2 == "all trades") {
+     plot_data <- plot_data
+   }
+   else {
+    plot_data <-
+      plot_data %>%
+      filter(trade == input$var2)
+   }
+
+
+
+  
     fulldata <- inner_join( plot_data, loglat, by = "postal")
  
     
      leaflet(fulldata) %>%
   addTiles() %>%  # Add default OpenStreetMap map tiles
-  addMarkers(~cologlat[,1], ~cologlat[,2], popup=~postal, label= ~postal, clusterOptions = markerClusterOptions() )  
+  addMarkers(~cologlat[,1], ~cologlat[,2], popup = ~postal, label = ~postal, clusterOptions = markerClusterOptions() )  
 })
 ```
 
