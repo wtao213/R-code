@@ -16,6 +16,7 @@ df1<- read.csv("C:/Users/TaoWa/Desktop/by_client_with_sequences.csv")
 library(shiny)
 
 library(ggplot2)
+
 library(tidyverse)
 library(DT)
 library(forcats)
@@ -86,17 +87,19 @@ dff<-
                          "Very Satisfied"="5",
                          "missing" = ".a", 
                          "multiple" = ".b"))
-  
+
+# top 10 trades with the most apprentices
+top_trades <-c("309A","310S","306A","403A","310T","620C","433A","313A","308A","415A")
 
 
-g_dff <-
-  dff %>%
-  group_by(collcode, year) %>%
-  mutate(is_satisfied = (q13s %in% c("Satisfied", "Very Satisfied"))) %>%
-  summarise(n = n(),
-            num_satisfied = sum(is_satisfied),
-            pct_satisfied = sum(is_satisfied) / n())%>%
-  mutate(p_satisfied= paste(round(100*pct_satisfied,2),"%",sep=""))
+# g_dff <-
+#   dff %>%
+#   group_by(collcode, year) %>%
+#   mutate(is_satisfied = (q13s %in% c("Satisfied", "Very Satisfied"))) %>%
+#   summarise(n = n(),
+#             num_satisfied = sum(is_satisfied),
+#             pct_satisfied = sum(is_satisfied) / n())%>%
+#   mutate(p_satisfied= paste(round(100*pct_satisfied,2),"%",sep=""))
 ```
 
 Column {data-width=200}
@@ -114,13 +117,17 @@ selectInput("var1",
 selectInput("var2", 
                               label = "side question options",
                               choices = c("college code", "parents' education",
-                                          "Co-op" ,"Gender"),
+                                          "Co-op" ,"Gender", "trade"),
                               selected = "college code")
 selectInput("var3", 
                               label = "satisfied question options",
                               choices = c("satisfied rate", "dissatisfied rate"
                                           ),
                               selected = "satisfied rate")
+
+checkboxInput("include_missing",
+              label = "include missing and multiple responses",
+              value = TRUE)
 ```
 
 Column {data-width=400}
@@ -131,12 +138,20 @@ Column {data-width=400}
 ```{r univariate}
 renderPlotly({
     data <- switch(input$var1,
-                   "overall question 13" = dff$q13s,
-                   "overall question 24" = dff$q24s,
-                   "overall question 39" = dff$q39s,
-                   "overall question 49" = dff$q49s, )
+                   "overall question 13" = "q13s",
+                   "overall question 24" = "q24s",
+                   "overall question 39" = "q39s",
+                   "overall question 49" = "q49s")
     
-    ggplot(dff,aes(data))+geom_bar(colour="light blue", fill="light blue") +
+    if(input$include_missing == TRUE) {
+      plot_data <- dff
+    } else {
+      plot_data <- 
+        dff %>%
+        filter_( paste("!(", data, "%in% c('missing', 'multiple'))") )
+    }
+    
+    ggplot(plot_data, aes(get(data))) + geom_bar(colour="light blue", fill="light blue") +
        theme(axis.text.x=element_text(angle=45,hjust=1)) +
       labs(title= "Figue 1", subtitle="response distribution by year", caption="no obvious changes during 3 years", y="response percentage")
 # plot_ly(x=data,
@@ -147,23 +162,44 @@ renderPlotly({
 ### Overall questions' response by year
 
 ```{r variable by year}
-renderPlotly({
-    data <- switch(input$var1,
-                   "overall question 13" = dff$q13s,
-                   "overall question 24" = dff$q24s,
-                   "overall question 39" = dff$q39s,
-                   "overall question 49" = dff$q49s, )
-    
-    data2 <- switch(input$var2,
+renderPlot({
+   
+    satisfy_question<- switch(input$var1,
+                   "overall question 13" = "q13s",
+                   "overall question 24" = "q24s",
+                   "overall question 39" = "q39s",
+                   "overall question 49" = "q49s" )
+
+    side_question <- switch(input$var2,
                    "college code"      = "collcode",
                    "parents' education"= "parents_college",
                    "Co-op" = "coop",
-                   "Gender"= "gender" )
+                   "Gender"= "gender",
+                   "trade" = "trade")
     
-    ggplot(dff,aes(year,fill=data)) +
-      geom_bar(position="fill") + # plot for year, parents' education)
-      labs(title= "Figure 2", subtitle="response distribution by year", caption="no obvious changes during 3 years", y="response percentage") +
-      theme(legend.position = "bottom")
+      if(input$include_missing == TRUE) {
+        plot_data <- dff
+      } else {
+        plot_data <- 
+          dff %>%
+          filter_( paste("!(", satisfy_question, "%in% c('missing', 'multiple')) ") ) %>%
+          filter_( paste("!(", side_question, "%in% c('missing', 'multiple'))") )
+      }
+      
+      if(side_question == "trade") {
+        plot_data <-
+          plot_data %>%
+          filter(trade %in% top_trades)
+      }
+      
+      ggplot(plot_data, aes(x = get(side_question), fill = get(satisfy_question))) +
+      geom_bar(position="fill")  # plot for year, parents' education)
+      # geom_text( stat="count", 
+      #            aes(x = get(side_question), y= (..count..)/sum(..count..), label= paste(100*( round((..count..)/sum(..count..),2)),"%", sep = "")),
+      #            size = 3, position= position_fill(vjust=0.5), hjust=0.5) +
+      # labs(title= "Figure 2", subtitle="response distribution by year", caption="no obvious changes during 3 years", y="response percentage") 
+     # theme(legend.position= "bottom")
+     
   })
 ```
 
@@ -174,44 +210,84 @@ Column {data-width=400}
 ### Heatmap: overall questions' satisfied rate by year and another factor
 
 ```{r}
-renderPlotly({
-    data <- switch(input$var1,
-                   "overall question 13" = dff$q13s,
-                   "overall question 24" = dff$q24s,
-                   "overall question 39" = dff$q39s,
-                   "overall question 49" = dff$q49s, )
-    
-    data2 <- switch(input$var2,
-                   "college code"      = "collcode",
-                   "parents' education"= "parents_college",
-                   "Co-op" = "coop",
-                   "Gender"= "gender" )
-    
-  g_dff <-
-  dff %>%
-  mutate(is_satisfied = (data %in% c("Satisfied", "Very Satisfied")),
-         not_satisfied = (data %in% c("Dissatisfied", "Very Dissatisfied"))) %>%
-  group_by_(.dots = c(data2, "year") ) %>%
+renderPlot({
+  data <- switch(input$var1,
+                 "overall question 13" = dff$q13s,
+                 "overall question 24" = dff$q24s,
+                 "overall question 39" = dff$q39s,
+                 "overall question 49" = dff$q49s )
+  
+  satisfy_question<- switch(input$var1,
+                 "overall question 13" = "q13s",
+                 "overall question 24" = "q24s",
+                 "overall question 39" = "q39s",
+                 "overall question 49" = "q49s" )
+
+  side_question <- switch(input$var2,
+                 "college code"      = "collcode",
+                 "parents' education"= "parents_college",
+                 "Co-op" = "coop",
+                 "Gender"= "gender",
+                 "trade" = "trade")
+
+  # a <- paste("!(", side_question, "%in% c('missing', 'multiple'))")
+
+  plot_data <- 
+    dff %>%
+    mutate(is_satisfied = (data %in% c("Satisfied", "Very Satisfied"))) %>%
+    mutate(not_satisfied = (data %in% c("Dissatisfied", "Very Dissatisfied")))
+  
+  if(input$include_missing == FALSE) {
+    plot_data <-
+      plot_data %>%
+      filter_( paste("!(", satisfy_question, "%in% c('missing', 'multiple')) ") ) %>%
+      filter_( paste("!(", side_question, "%in% c('missing', 'multiple'))") )
+  }
+
+
+    # if(input$include_missing == TRUE) {
+  #   plot_data <- dff
+  # } else {
+  #   plot_data <- 
+  #     dff %>%
+  #     filter_( paste("!(", satisfy_question, "%in% c('missing', 'multiple')) ") ) %>%
+  #     filter_( paste("!(", side_question, "%in% c('missing', 'multiple'))") )
+  # }
+  # 
+    # 
+  # plot_data <- dff
+      
+  plot_data <-
+  plot_data %>%
+  group_by_(.dots = c(side_question, "year") ) %>%
   summarise(n = n(),
             num_satisfied = sum(is_satisfied),
             pct_satisfied = sum(is_satisfied) / n(),
             num_dsatisfied = sum(not_satisfied),
             pct_dsatisfied = sum(not_satisfied) / n())%>%
-  mutate(p_satisfied= paste(round(100*pct_satisfied,2),"%",sep=""),
-         p_dsatisfied= paste(round(100*pct_dsatisfied,2),"%",sep=""))
+  mutate(p_satisfied = paste(round(100*pct_satisfied,2),"%",sep=""),
+         p_dsatisfied = paste(round(100*pct_dsatisfied,2),"%",sep=""))
   
   data3 <- switch(input$var3,
-                  "satisfied rate"= g_dff$pct_satisfied, 
-                  "dissatisfied rate" = g_dff$pct_dsatisfied
+                  "satisfied rate"= "pct_satisfied", 
+                  "dissatisfied rate" = "pct_dsatisfied"
                    )
 
-  ggplot(g_dff) +
-  aes(year, get(data2)) +
-  geom_tile(aes(fill=data3)) +
-  geom_text(aes(label = percent(round(pct_satisfied, 2)), size = 2)) +
-  scale_fill_gradient(low = "white", high = "coral") +
-  theme(axis.text.x=element_text(angle=45,hjust=1)) +
-  labs(title= "Figure 3", subtitle="Satisfied rate for each college", caption="SENE only have year 13/14, LACI doesn't have year 15/16")
-})
+  ggplot(plot_data) +
+   aes(year, get(side_question)) +
+   geom_tile(aes(fill=get(data3))) +
+   geom_text(aes(label = percent(round(get(data3), 2)), size = 2)) +
+   scale_fill_gradient(low = "white", high = "coral") +
+   theme(axis.text.x=element_text(angle=45,hjust=1)) +
+   labs(title = "Figure 3", 
+        subtitle = "Satisfied rate for each college", 
+        caption = nrow(plot_data))
+        # caption = "SENE only have year 13/14, LACI doesn't have year 15/16")
+
+   #plot_ly(g_dff, x=year, y = side_question, z=data3,
+    #    type = "heatmap",
+     #   colors = colorRamp(c("white", "coral")))
+  
+  })
 ```
 
