@@ -1,0 +1,110 @@
+---
+title: "shiny dashboard"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+
+df1<- read.csv("C:/Users/TaoWa/Desktop/by_client_with_sequences.csv")
+
+#I am a comment to show how GitHub works
+
+library(shiny)
+
+library(ggplot2)
+library(tidyverse)
+library(DT)
+library(forcats)
+library(scales)
+
+df1$collcode_y<-as.character(paste(df1$collcode,df1$year,sep="_"))
+df1$y_collcode<-as.character(paste(df1$year,df1$collcode,sep="_"))
+
+dff<-
+  df1%>%
+  rename(parents_college=q80)%>%
+  mutate(parents_college=fct_recode(parents_college, 
+                                    "yes" = "1", 
+                                    "no" = "2", 
+                                    "missing" = ".a", 
+                                    "multiple" = ".b" ))%>%
+  rename(gender=q72)%>%
+  mutate(gender=fct_recode(gender, 
+                           "female" = "1", 
+                           "male" = "2", 
+                           "uncertain" = "3",
+                           "missing" = ".a", 
+                           "multiple" = ".b" ))%>%
+  rename(coop=q79)%>%
+  mutate(coop=fct_recode(coop,
+                         "yes" = "1", 
+                         "no" = "2", 
+                         "unknown" = "3",
+                         "missing" = ".a", 
+                         "multiple" = ".b"  ))%>%
+  mutate(useful_skills=fct_recode(q13s,
+                                  "Very Dissatisfied"="1",
+                                  "Dissatisfied"="2",
+                                  "Neither Satisfied nor Dissatisfied"="3",
+                                  "Satisfied"="4",
+                                  "Very Satisfied"="5",
+                                  "missing" = ".a", 
+                                  "multiple" = ".b"))%>%
+  mutate(q13s=fct_recode(q13s,
+                         "Very Dissatisfied"="1",
+                         "Dissatisfied"="2",
+                         "Neither Satisfied nor Dissatisfied"="3",
+                         "Satisfied"="4",
+                         "Very Satisfied"="5",
+                         "missing" = ".a", 
+                         "multiple" = ".b"))
+
+
+g_dff <-
+  dff %>%
+  group_by(collcode, year) %>%
+  mutate(is_satisfied = (q13s %in% c("Satisfied", "Very Satisfied"))) %>%
+  summarise(n = n(),
+            num_satisfied = sum(is_satisfied),
+            pct_satisfied = sum(is_satisfied) / n())%>%
+  mutate(p_satisfied= paste(round(100*pct_satisfied,2),"%",sep=""))
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Chart A
+
+```{r g1}
+
+ggplot(g_dff,aes(year,collcode)) +
+  geom_tile(aes(fill=pct_satisfied)) +
+  geom_text(aes(label = percent(round(pct_satisfied, 2)), size = 2)) +
+  scale_fill_gradient(low = "white", high = "coral") + 
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  labs(title= "Graph 7", subtitle="Satisfied rate for each college", caption="SENE only have year 13/14, LACI doesn't have year 15/16")
+```
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### Chart B
+
+```{r heatmap}
+
+ggplot(dff,aes(x=reorder(collcode,q13s %in% c("Satisfied", "Very Satisfied"),.asc=Ture),fill=q13s)) +
+  geom_bar(position="fill") +  # position adjustments plot for q13s in each college
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  labs(title= "Graph 2", subtitle="college's satisfied rate", caption="order in sum of satisfied and very satisfied",x="college name", y="response percentage")
+```
+
+### Chart C
+
+```{r}
+
+```
+

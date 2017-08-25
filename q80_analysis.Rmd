@@ -1,0 +1,160 @@
+---
+title: "Parents' education analysis"
+author: "Wanting Tao"
+date: "June 22, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+filename <- "C:/Users/TaoWa/Desktop/by_client_with_sequences.csv"
+df1<- read.csv("C:/Users/TaoWa/Desktop/by_client_with_sequences.csv")
+
+by_client <- read.csv("C:/Users/TaoWa/Desktop/by_client_with_sequences.csv")
+
+library(ggplot2)
+library(tidyverse)
+library(DT)
+library(forcats)
+
+df1$collcode_y<-as.character(paste(df1$collcode,df1$year,sep="_"))
+df1$y_collcode<-as.character(paste(df1$year,df1$collcode,sep="_"))
+
+dff<-
+  df1%>%
+  rename(parents_college=q80)%>%
+  mutate(parents_college=fct_recode(parents_college, 
+                                    "yes" = "1", 
+                                    "no" = "2", 
+                                    "missing" = ".a", 
+                                    "multiple" = ".b" ))%>%
+  rename(gender=q72)%>%
+  mutate(gender=fct_recode(gender, 
+                                    "female" = "1", 
+                                    "male" = "2", 
+                                    "uncertain" = "3",
+                                    "missing" = ".a", 
+                                    "multiple" = ".b" ))
+```
+
+
+## parents' education * year
+
+Using t_college to demonstrate how many apprentices from each college responsed the survey under different years.
+t_parent shows how many apprentices' parents attended college/university before.
+percentage of parents' education didn't change a lot.
+```{r frequency tables}
+
+table(dff$parents_college) # overall distribution for q80
+ggplot(dff,aes(parents_college))+geom_bar()# total distubution for q80
+
+t_q80 <- 
+  table(dff$parents_college, df1$year) %>%
+  as.data.frame() %>%
+  rename(parents_college = Var1, year = Var2, surveys = Freq)
+
+s_q80 <- 
+  t_q80 %>%
+  spread(key = year, value = surveys) %>%
+  mutate(total = `13/14` + `14/15` + `15/16`) %>%
+  arrange(desc(total))
+
+s_q80%>%datatable()
+
+ggplot(dff,aes(year,fill=parents_college))+geom_bar(position="fill")# plot for year, parents' education
+```
+
+## parents' college * college
+
+The response "1" indicate parents attended the college/University education before, and "2" indicate not.
+From the result table we can see only SENECA has more "2" than "1", which means most seneca students' parents didn't attend the education from college/University.
+
+```{r c_parent}
+c_parent<-
+  table(dff$collcode,dff$parents_college) %>%
+  as.data.frame() %>%
+  rename(collcode =Var1, parents_college = Var2)
+
+s_parent<-
+  c_parent %>%
+  spread(key=parents_college,value=Freq)
+
+s_parent%>%datatable()
+
+ggplot(dff,aes(parents_college,collcode))+geom_jitter()# plot for college, parents' education
+
+ggplot(dff,aes(collcode,fill=parents_college))+geom_bar(position="fill")# position adjustments plot for parents' education in each college
+
+ggplot(dff,aes(parents_college,fill=collcode))+geom_bar(position="fill")# position adjustments plot for each college' parents education.
+```
+
+## parents' education * gender
+using g_parent to demonstrate gender* parents' education.For rows,"1" indicate female;"2" indicate male, "3" indicate other gender identify. Female aprrentices have similar proportion on parents' education, but male has an obvious larger proportion on higher parents' education.
+
+```{r g_parent}
+g_parent<-table(dff$gender,dff$parents_college) #q72*q80
+prop.table(g_parent,1)   # row percentage
+
+g_parent<-
+  table(dff$gender,dff$parents_college) %>%
+  as.data.frame() %>%
+  rename(gender = Var1, parents_college= Var2)
+
+sg_parent<-
+  g_parent %>%
+  spread(key=parents_college,value=Freq)
+sg_parent%>% datatable()
+
+
+ggplot(dff,aes(parents_college,gender))+geom_jitter() #plot for gender, parents' education
+ggplot(dff,aes(parents_college,fill=gender))+geom_bar(position="fill")# plot for q80 with gender
+```
+
+## top 10 trade by year
+
+plot for college code, and overall questions
+
+```{r top 10}
+t_trade <- 
+  table(dff$trade, dff$year) %>%
+  as.data.frame() %>%
+  rename(trade = Var1, year = Var2, surveys = Freq) #dataframe table by trade
+  
+
+s_trade <- 
+  t_trade %>%
+  spread(key = year, value = surveys) %>%
+  mutate(total = `13/14` + `14/15` + `15/16`) %>%
+  arrange(desc(total))
+
+slice(s_trade,1:10)%>% datatable() #cut the top 10 trades in total
+
+#subset observations
+top<-c("309A","310S","306A","403A","310T","620C","433A","313A","308A","415A")
+top_data<-filter(dff,trade%in%top)
+
+ggplot(top_data,aes(parents_college,trade))+geom_jitter() #plot for trade, parents' education
+ggplot(top_data,aes(parents_college,fill=trade))+geom_bar(position="fill")# plot for q80 with trade
+ggplot(top_data,aes(trade,fill=parents_college))+geom_bar(position="fill") #distribution of parents' education for each trade
+```
+
+## parents'education plus college plus year
+
+Check parents' education for college by year
+```{r yc_parents,fig.width=10,fig.height=5}
+
+yc_parents<-
+  table(dff$y_collcode,dff$parents_college)%>%
+  as.data.frame()%>%
+  rename(y_collcode=Var1,parents_college=Var2)
+
+yc_parents%>%datatable()
+# college response nubmer change by year
+ggplot(dff,aes(collcode,fill=y_collcode))+geom_bar(position="fill")
+
+
+# q80 distribution by college*year and change lable angle
+yc_q80<-ggplot(dff,aes(collcode_y,fill=parents_college))+geom_bar(position="fill")
+yc_q80 + theme(axis.text.x=element_text(angle=90,hjust=1))
+```
+

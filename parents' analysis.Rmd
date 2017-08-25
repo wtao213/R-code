@@ -1,0 +1,235 @@
+---
+title: "Parents' Analysis"
+author: "Wanting Tao"
+date: "July 5, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+filename <- "C:/Users/TaoWa/Desktop/by_client_with_sequences.csv"
+df1<- read.csv("C:/Users/TaoWa/Desktop/by_client_with_sequences.csv")
+
+by_client <- read.csv("C:/Users/TaoWa/Desktop/by_client_with_sequences.csv")
+
+library(ggplot2)
+library(tidyverse)
+library(DT)
+library(forcats)
+library(scales)
+
+df1$collcode_y<-as.character(paste(df1$collcode,df1$year,sep="_"))
+df1$y_collcode<-as.character(paste(df1$year,df1$collcode,sep="_"))
+
+dff<-
+  df1%>%
+  rename(parents_college=q80)%>%
+  mutate(parents_college=fct_recode(parents_college, 
+                                    "yes" = "1", 
+                                    "no" = "2", 
+                                    "missing" = ".a", 
+                                    "multiple" = ".b" ))%>%
+  rename(gender=q72)%>%
+  mutate(gender=fct_recode(gender, 
+                                    "female" = "1", 
+                                    "male" = "2", 
+                                    "uncertain" = "3",
+                                    "missing" = ".a", 
+                                    "multiple" = ".b" ))
+```
+
+## parents' education * year
+
+Using t_college to demonstrate how many apprentices from each college responsed the survey under different years.
+t_parent shows how many apprentices' parents attended college/university before.
+percentage of parents' education didn't change a lot.
+
+```{r frequency tables}
+
+table(dff$parents_college) # overall distribution for q80
+ggplot(dff,aes(parents_college))+geom_bar()# total distubution for q80
+
+t_q80 <- 
+  table(dff$parents_college, df1$year) %>%
+  as.data.frame() %>%
+  rename(parents_college = Var1, year = Var2, surveys = Freq)
+
+s_q80 <- 
+  t_q80 %>%
+  spread(key = year, value = surveys) %>%
+  mutate(total = `13/14` + `14/15` + `15/16`) %>%
+  arrange(desc(total))
+
+s_q80%>%datatable()
+
+ggplot(dff,aes(year,fill=parents_college)) +
+  geom_bar(position="fill") + # plot for year, parents' education
+  labs(title= "Graph 1", subtitle="response distribution by year", caption="no obvious changes during 3 years", y="response percentage")
+```
+
+## parents' college * college
+
+The response "1" indicate parents attended the college/University education before, and "2" indicate not.
+From the result table we can see only SENECA has more "2" than "1", which means most seneca students' parents didn't attend the education from college/University.
+
+ALGO has most missing values.
+SLAW has most proportion of parents_college = yes.
+SENE has most proportion of parents_college = no.
+
+```{r c_parent}
+c_parent<-
+  table(dff$collcode,dff$parents_college) %>%
+  as.data.frame() %>%
+  rename(collcode =Var1, parents_college = Var2)
+
+s_parent<-
+  c_parent %>%
+  spread(key=parents_college,value=Freq)
+
+s_parent%>%datatable()
+
+p1<-
+  ggplot(dff,aes(x=reorder(collcode,parents_college=="no",.asc=Ture),fill=parents_college)) +
+  geom_bar(position="fill") + # position adjustments plot for parents' education in each college
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  labs(title= "Graph 2", subtitle="college's parents rate", caption="order in parents didn't go to college/universities",x="college name",     y="response percentage")
+
+print(p1)
+
+```
+
+## parents' education * gender
+using g_parent to demonstrate gender* parents' education.
+Female has higest proportion of parents_college = no.
+
+```{r g_parent}
+g_parent<-table(dff$gender,dff$parents_college) #q72*q80
+prop.table(g_parent,1)   # row percentage
+
+g_parent<-
+  table(dff$gender,dff$parents_college) %>%
+  as.data.frame() %>%
+  rename(gender = Var1, parents_college= Var2)
+
+sg_parent<-
+  g_parent %>%
+  spread(key=parents_college,value=Freq)
+sg_parent%>% datatable()
+
+
+
+ggplot(dff,aes(x=reorder(gender,parents_college=="no",.asc=Ture),fill=parents_college)) +
+  geom_bar(position="fill") + # plot for q80 with gender
+  labs(title= "Graph 3", subtitle="parents' education distribution for each gender", caption="female have highest satisfied rate",x="gender")
+```
+
+## top 10 trade by year
+
+plot for college code, and overall questions
+```{r top 10}
+t_trade <- 
+  table(dff$trade, dff$year) %>%
+  as.data.frame() %>%
+  rename(trade = Var1, year = Var2, surveys = Freq) #dataframe table by trade
+  
+
+s_trade <- 
+  t_trade %>%
+  spread(key = year, value = surveys) %>%
+  mutate(total = `13/14` + `14/15` + `15/16`) %>%
+  arrange(desc(total))
+
+slice(s_trade,1:10)%>% datatable() #cut the top 10 trades in total
+
+#subset observations
+top<-c("309A","310S","306A","403A","310T","620C","433A","313A","308A","415A")
+top_data<-filter(dff,trade%in%top)
+
+
+
+ggplot(top_data,aes(x=reorder(trade,parents_college=="no",.desc=Ture),fill=parents_college)) +
+  geom_bar(position="fill") + #distribution of parents' education for each trade
+  labs(title= "Graph 4", subtitle="parents' rate distribution for each trade", caption="620C have highest proportion rate of parents no",x="trade")
+
+```
+
+## colleges response number by year
+
+SENE only has year 13/14.
+LACI only has year 13/14, 14/15
+NIAG has most response number in 15/16.
+```{r yc_parents,fig.width=10,fig.height=5}
+
+yc_parents<-
+  table(dff$y_collcode,dff$parents_college)%>%
+  as.data.frame()%>%
+  rename(y_collcode=Var1,parents_college=Var2)
+
+yc_parents%>%datatable()
+
+
+# college response nubmer change by year
+ggplot(dff,aes(x=reorder(collcode,year=="15/16",.desc=Ture),fill=year)) +
+  geom_bar(position="fill") + 
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  labs(title= "Graph 5", subtitle="colleges response number during 3 years", caption="SENE only have one year record, LACI only have two years' records",x="college code", y="proportion by year")
+```
+## parents'education plus college plus year
+## heat map: parents attended college/university by college and year
+
+CAMB increase most: 55% to 71%, increase 16%.
+ALGO decrease most: 70% to 38%, decrease 32%.
+Highest rate appears in SSFL on year 14/15 for 77%.
+lowest rate appears in ALGO on year 15/16 for 38%.
+
+```{r heat map,fig.width=5,fig.height=10}
+g_dff <-
+  dff %>%
+  group_by(collcode, year) %>%
+  mutate(parents_yes = (parents_college=="yes" )) %>%
+  summarise(n = n(),
+            num_yes = sum(parents_yes),
+            pct_yes = sum(parents_yes) / n())%>%
+  mutate(p_yes= paste(round(100*pct_yes,2),"%",sep=""))
+
+p11<-
+  ggplot(g_dff,aes(year,collcode)) +
+  geom_tile(aes(fill=pct_yes)) +
+  geom_text(aes(label = percent(round(pct_yes, 2)), size = 2)) +
+  scale_fill_gradient(low = "white", high = "coral") + 
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  labs(title= "Graph 6", caption="SENE only have year 13/14, LACI doesn't have year 15/16", y ="college code")
+
+
+print(p11)
+```
+
+## heat map: parents didn't attend college/university by college and year
+
+LOYT increase most: 28% to 43%, increase 15%.
+CAMB decrease most: 43% to 29%, decrease 14%.
+Highest rate appears in SENE on year 13/14 for 50%.
+lowest rate appears in ALGO on year 15/16 for 21%.
+
+```{r heat map2,fig.width=5,fig.height=10}
+g_dff <-
+  dff %>%
+  group_by(collcode, year) %>%
+  mutate(parents_no = (parents_college=="no" )) %>%
+  summarise(n = n(),
+            num_no = sum(parents_no),
+            pct_no = sum(parents_no) / n())%>%
+  mutate(p_no= paste(round(100*pct_no,2),"%",sep=""))
+
+p12 <-
+  ggplot(g_dff, aes(year, collcode)) + 
+  geom_tile(aes(fill = pct_no)) + 
+  geom_text(aes(label = percent(round(pct_no, 2)), size = 2)) + #add label of each cell
+  scale_fill_gradient(low = "white",  high = "coral") +                 #change color
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +            #change lable direction
+  ggtitle("Graph 7") +            #add title
+  labs(caption="SENE only have year 13/14, LACI doesn't have year 15/16",y="college code")                           #add caption, but can also add title, x-axis,y-axis
+  
+  
+print(p12)
+```

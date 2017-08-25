@@ -1,0 +1,95 @@
+---
+title: "survey_r"
+author: "Wanting Tao"
+date: "June 20, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+filename <- "C:/Users/TaoWa/Desktop/by_client_with_sequences.csv"
+df1<- read.csv("C:/Users/TaoWa/Desktop/by_client_with_sequences.csv")
+
+library(ggplot2)
+library(tidyverse)
+library(DT)
+```
+
+
+## responses, and parents * year
+
+Using t_college to demonstrate how many apprentices from each college responsed the survey under different years.
+t_parent shows how many apprentices' parents attended college/university before.
+percentage of parents' education didn't change a lot.
+```{r frequency tables}
+t_college<-table(df1$collcode,df1$year)
+t_college
+table(df1$year) # response each year
+t_parent<-table(df1$year,df1$q80)#q80 is parents college, parent's education * year
+t_parent %>% datatable()
+prop.table(t_parent,1) %>% datatable()  # row percentage
+ggplot(df1,aes(q80,year))+geom_jitter()# plot for year, parents' education
+```
+
+
+## parents' college * college
+
+The response "1" indicate parents attended the college/University education before, and "2" indicate not.
+From the result table we can see only SENECA has more "2" than "1", which means most seneca students' parents didn't attend the education from college/University.
+
+```{r c_parent}
+c_parent<-table(df1$collcode,df1$q80) #q80 *college
+c_parent
+ggplot(df1,aes(q80,collcode))+geom_jitter()# plot for college, parents' education
+```
+
+## parents * gender
+using g_parent to demonstrate gender* parents' education.For rows,"1" indicate female;"2" indicate male, "3" indicate other gender identify. Female aprrentices have similar proportion on parents' education, but male has an obvious larger proportion on higher parents' education.
+
+```{r g_parent}
+g_parent<-table(df1$q72,df1$q80) #q72*q80
+g_parent
+prop.table(g_parent,1)   # row percentage
+ggplot(df1,aes(q80,q72))+geom_jitter() #plot for gender, parents' education
+
+```
+
+  
+## top 10 trade by year
+
+plot for college code, and overall questions
+
+```{r top 10}
+t_trade <- 
+  table(df1$trade, df1$year) %>%
+  as.data.frame() %>%
+  rename(trade = Var1, year = Var2, surveys = Freq) 
+  
+
+s_trade <- 
+  t_trade %>%
+  spread(key = year, value = surveys) %>%
+  mutate(total = `13/14` + `14/15` + `15/16`) %>%
+  arrange(desc(total))
+
+top_10<-slice(s_trade,1:10)
+top_10
+
+```
+
+## Including Plots
+
+plot for college code, and overall questions
+
+```{r plots}
+
+ggplot(df1,aes(q13s))+geom_bar()#plot for q13s
+
+ggplot(df1,aes(q24s))+geom_bar()#plot for q24s
+
+ggplot(df1,aes(q39s))+geom_bar()#plot for q39s
+
+ggplot(df1,aes(q49s))+geom_bar()#plot for q49s
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

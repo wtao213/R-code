@@ -115,10 +115,17 @@ selectInput("var1",
                                           "15/16"),
                               selected = "13/14")
 
+
 selectInput("var2",
                     label= "trade code",
                     choices = c("309A","310S","306A","403A","310T","620C","433A","313A","308A","415A", "all trades"),
                     selected = "all trades")
+
+selectInput("var3",
+                    label = "parents' college",
+                    choices = c("Yes", "No", "all"),
+                    selected = "all"
+            )
 ```
 
 Column {data-width=800}
@@ -159,7 +166,22 @@ renderLeaflet({
    }
 
 
-
+  ## filter for parents' education
+  if (input$var3 == "all"){
+    plot_data <- plot_data
+  }
+  else if ( input$var3 == "Yes") {
+    plot_data <-
+      plot_data %>%
+      filter(parents_college == "yes")
+  }
+  else {
+    plot_data <-
+      plot_data %>%
+      filter(parents_college == "no")
+  }
+  
+  
   
     fulldata <- inner_join( plot_data, loglat, by = "postal")
  
