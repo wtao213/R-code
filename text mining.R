@@ -20,8 +20,9 @@ install.packages("NLP")
 library("NLP")
 library("tm")
 library("SnowballC")
-library("wordcloud")
 library("RColorBrewer")
+library("wordcloud")
+
 
 # remember switch \ to /
 df1<- read.csv("C:/Users/wtao/Desktop/testing_survey_2.csv")
@@ -36,6 +37,7 @@ text <- readLines(file.choose("C:/Users/wtao/Desktop/survey2text.txt"))
 # Load the data as a corpus
 docs <- Corpus(VectorSource(text))
 
+#look at the word inside
 inspect(docs)
 
 
@@ -51,7 +53,7 @@ docs <- tm_map(docs, removeWords, stopwords("english"))
 
 # Remove your own stop word
 # specify your stopwords as a character vector
-docs <- tm_map(docs, removeWords, c("blabla1", "blabla2")) 
+docs <- tm_map(docs, removeWords, c("high", "much","less","lower")) 
 
 # Remove punctuations
 docs <- tm_map(docs, removePunctuation)
@@ -64,6 +66,9 @@ docs <- tm_map(docs, stripWhitespace)
 
 
 # build a term-document matrix
+# head(,...) show the first parts, tail() show last parts
+
+
 dtm <- TermDocumentMatrix(docs)
 m <- as.matrix(dtm)
 v <- sort(rowSums(m),decreasing=TRUE)
@@ -74,7 +79,7 @@ head(d, 10)
 set.seed(1234)
 wordcloud(words = d$word, freq = d$freq, min.freq = 1,
           max.words=200, random.order=FALSE, rot.per=0.35, 
-          colors=brewer.pal(8, "Dark2"))
+          colors=brewer.pal(8, "Set1"))
 
 
 # this part haven't really work yet
