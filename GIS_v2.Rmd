@@ -1,0 +1,247 @@
+---
+title: "GIS-shiny_v2"
+author: "Wanting Tao"
+date: "2/25/2020"
+output: 
+  flexdashboard::flex_dashboard:
+  orientation: columns
+vertical_layout: fill
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(shiny)
+library(flexdashboard)
+library(leaflet)
+library(ggmap)
+library(tidyverse)
+library(dplyr)
+library(shiny)
+library(DT)
+library(forcats)
+library(ggplot2)
+## import data
+ df1<- read.csv("C:/Users/012790/Desktop/GIS/exist_cus_gis_full_264k.csv")
+ full<- read.csv("C:/Users/012790/Desktop/GIS/postfull600k.csv")
+
+##df1<- read.csv("exist_cus_gis_full_264k.csv")
+##full<- read.csv("postfull600k.csv")
+
+df1$age_today<-as.numeric(df1$age_today)
+
+
+```
+Column {data-width=400}
+-----------------------------------------------------------------------
+
+### Select the customer you want
+
+  
+```{r selectbar}
+selectInput("var1", 
+            label = "Current Age",
+            choices = c("18-25", "26-50","50+","All"),
+            selected = "All")
+selectInput("var2",
+            label= "Equity",
+            choices = c(">= 1K",">= 5K",">= 10K",">= 50K","All"),
+            selected = "All")
+selectInput("var3",
+            label = "Product type",
+            choices = c("SD", "WM","multi-class" ,"All"),
+            selected = "All")
+selectInput("var4",
+            label = "Province",
+            choices = c("Alberta","British Columbia","Manitoba","New Brunswick","Newfoundland","Northwest Territories", "Nova Scotia", "Nunavut","Ontario", "Prince Edward Island","Quebec","All"),
+            selected = "All")
+
+```
+
+
+
+### Distribution of selected customers
+    
+
+```{r}
+renderPlot({
+      ## plot_data by customers' current age & ia and | is or
+  if(input$var1 == "All") {
+    plot_data <- df1
+  } 
+  else if(input$var1 == "18-25") {
+    plot_data <- 
+      df1 %>%
+      filter(age_today >= 18 & age_today <= 25)
+  } 
+  else if (input$var1 == "26-50") {
+    plot_data <- 
+      df1 %>%
+      filter(age_today >= 26 & age_today <= 50)
+  }
+  
+  else {
+    plot_data <- 
+      df1 %>%
+      filter(age_today >= 51)
+  }
+  
+  # (input$var2)
+  # plot_data by customer's Equity
+  # if (TRUE) {
+  if (input$var2 == "All") {
+    plot_data <- plot_data
+  }
+  else if ( input$var2 == ">= 1K") {
+    plot_data <-
+      plot_data %>%
+      filter(Equity >= 1000)
+  }
+  else if ( input$var2 == ">= 5K") {
+    plot_data <-
+      plot_data %>%
+      filter(Equity >= 5000)
+    }
+  else if ( input$var2 == ">= 10K") {
+    plot_data <-
+      plot_data %>%
+      filter(Equity >= 10000)
+  }
+  else {
+    plot_data <-
+      plot_data %>%
+      filter(Equity >= 50000)
+  }
+  
+  ## filter for customer's account class
+  if (input$var3 == "All"){
+    plot_data <- plot_data
+  }
+  else {
+    plot_data <-
+      plot_data %>%
+      filter(classtype == input$var3)
+  }
+  
+  ## filter for customer's province
+  if (input$var4 == "All"){
+    plot_data <- plot_data
+  }
+   else {
+    plot_data <-
+      plot_data %>%
+      filter(Province == input$var4)
+  }
+  
+  
+## becaureful, df1 is only on and bc cusotmer only
+fulldata <- left_join(plot_data, full,by = "PostalCode")
+## remove missing
+clean <- fulldata[complete.cases(fulldata[,23:24]),]
+ 
+## your plotting code   
+##    ggplot(clean,aes(data))+geom_bar(colour="light blue", fill="light blue") +
+##       theme(axis.text.x=element_text(angle=45,hjust=1)) +
+##      labs(title= "Figue 1", subtitle="response distribution by year", caption="no obvious changes during 3 years",   ##      y="response percentage")
+    
+ ggplot(clean, aes(x = age_today)) + 
+  geom_histogram(binwidth = 1, colour = "white", fill = "lightblue") +
+  geom_vline(aes(xintercept = mean(age_today, na.rm = T)),
+             colour = "red", linetype ="longdash", size = .8)
+# plot_ly(x=data,
+#        type="histogram")
+     })
+```
+
+
+
+Column {data-width=800}
+-----------------------------------------------------------------------
+### GIS for client numbers by financial attributes
+  
+```{r}
+renderLeaflet({
+  
+  ## plot_data by customers' current age & ia and | is or
+  if(input$var1 == "All") {
+    plot_data <- df1
+  } 
+  else if(input$var1 == "18-25") {
+    plot_data <- 
+      df1 %>%
+      filter(age_today >= 18 & age_today <= 25)
+  } 
+  else if (input$var1 == "26-50") {
+    plot_data <- 
+      df1 %>%
+      filter(age_today >= 26 & age_today <= 50)
+  }
+  
+  else {
+    plot_data <- 
+      df1 %>%
+      filter(age_today >= 51)
+  }
+  
+  # (input$var2)
+  # plot_data by customer's Equity
+  # if (TRUE) {
+  if (input$var2 == "All") {
+    plot_data <- plot_data
+  }
+  else if ( input$var2 == ">= 1K") {
+    plot_data <-
+      plot_data %>%
+      filter(Equity >= 1000)
+  }
+  else if ( input$var2 == ">= 5K") {
+    plot_data <-
+      plot_data %>%
+      filter(Equity >= 5000)
+    }
+  else if ( input$var2 == ">= 10K") {
+    plot_data <-
+      plot_data %>%
+      filter(Equity >= 10000)
+  }
+  else {
+    plot_data <-
+      plot_data %>%
+      filter(Equity >= 50000)
+  }
+  
+  ## filter for customer's account class
+  if (input$var3 == "All"){
+    plot_data <- plot_data
+  }
+  else {
+    plot_data <-
+      plot_data %>%
+      filter(classtype == input$var3)
+  }
+  ## filter on provicne
+   if (input$var4 == "All"){
+    plot_data <- plot_data
+  }
+   else {
+    plot_data <-
+      plot_data %>%
+      filter(Province == input$var4)
+  } 
+  
+## becaureful, df1 is only on and bc cusotmer only
+fulldata <- left_join(plot_data, full,by = "PostalCode")
+## remove missing
+clean <- fulldata[complete.cases(fulldata[,23:24]),]
+content <- paste(sep ="",
+                 "Equity :",clean$Equity,
+                 ", current age :",clean$age_today 
+)
+
+## leaflet with full equity
+leaflet(clean) %>%
+    addTiles() %>%  # Add default OpenStreetMap map tiles
+    addMarkers(~lng, ~lat, popup=~Equity, label= ~content, clusterOptions = markerClusterOptions() )
+})
+```
+
+
