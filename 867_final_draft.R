@@ -22,15 +22,47 @@ trans      <- read_csv("C:\\Users\\wanti\\Desktop\\MMA\\MMA 867 Predictive Model
 
 ###########################################
 # join data together
+rm(df)
 
 df <- inner_join(order_list, product, by="product_id")
 df <- left_join(df, trans, by="product_category_name")
 df <- left_join(df, orders, by="order_id")
 ####################
 # join with seller id and check seller
+length(unique(df$seller_id))
+length(unique(df$order_id))
+
 sort(table(df$seller_id), decreasing= TRUE)
 
 head(sort(table(df$seller_id), decreasing= TRUE),10)
+
+t  <- df %>% group_by(seller_id)%>% summarise(
+  N = length(unique(order_id)),
+  sum_price = sum(price)
+)
+
+mean(t$N)
+sum(head(t$N,31)) # top 1% of seller  26654
+sum(head(t$N,309)) # top 10% of seller 68362
+sum(t$N)  #  100010 total order
+######################
+# plot orders by sellres
+t <- t[order(-t$N ),] # reorder the dataframe
+
+ggplot(head(t,25),  aes(x = reorder(seller_id, -N), y = N)) + 
+  geom_bar(stat="identity", color='lightblue',fill='lightblue')+
+  geom_hline(yintercept = 32, color='Red',linetype='dotted',size =1.5)+
+  annotate("text", x = 2.5, y = 32, label = "Order Avg is 32", vjust = -0.5,color='Red')+
+  labs(x="Top Seller", y ="Approved Orders")
+
+
+
+
+
+
+
+
+
 
 # when df inner join with order pay from 112650 to 117601 records
 # df <- inner_join(df, order_pay, by="order_id")
@@ -40,14 +72,26 @@ length(unique(df$order_id))
 length(unique(df[c("order_id","product_id" )]))
 length(unique(order_pay$order_id))
 
-unique(df[c("yad", "per")])
 
 
+##################
+# plotting overal order each day
+df$approve_date <- as.Date(df$order_approved_at)
+dff  <- df %>% group_by(approve_date)%>% summarise(
+  N = length(price),
+  sum_price = sum(price)
+)
 
+order_day <- dff$N
+order_day <- head(order_day,-30)
+order_day <- ts(order_day, frequency=365, start=c(2017, 8))
+plot.ts(order_day, xlab="Date", ylab="order number")
+
+plot(df$approve_date)
 ##############################################################
 # look at the sales for the top 1-3 sellers
 
-# 6560211a19b47992c3666cc44a7e94c0     2033
+# 6560211a19b47992c3666cc44a7e94c0     2033 unique order id: 1854
 # 4a3ca9315b744ce9f8e9374361493884    1987
 # 1f50f920176fa81dab994f9023523100    1931
 
@@ -74,8 +118,11 @@ dff  <- sell1 %>% group_by(approve_date)%>% summarise(
   sum_price = sum(price)
 )
 
+
 ## look at item  per day some days don't have item, please group by weeks
-plot.ts(dff$N, xlab="Date", ylab="order number")
+od <- dff$N
+od <- ts(od, frequency=365, start=c(2017, 48))
+plot.ts(od, xlab="Date", ylab="order number")
 
 ## cut them into weeks
 dff <- dff %>% 
