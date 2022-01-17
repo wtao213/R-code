@@ -19,7 +19,7 @@ Covid19cases.data<-read_csv(url(Covid19casesfile))
 
 table(Covid19cases.data$iso_code)
 
-CAN.vaccination.data = vaccination.data %>% filter(vaccination.data$iso_code == "CAN")
+#CAN.vaccination.data = vaccination.data %>% filter(vaccination.data$iso_code == "CAN")
 CAN.cases.data = Covid19cases.data %>% filter(Covid19cases.data$iso_code == "CAN")
 # = Variant.data %>% filter(Variant.data$location == "Canada", Variant.data$variant == "Delta")
 
@@ -145,16 +145,6 @@ plot.ts(CAN.cases.data$new_cases)
 plot.ts(CAN.cases.data$stringency_index)
 plot.ts(CAN.cases.data$people_vaccinated)
 
-# with insurance and advertising data (also part of FPP)
-
-plot(df$date,df$new_cases, main="", xlab="Year")
-plot(df$date,df$stringency_index, main="", xlab="Year")
-View(df)
-table(df$stringency_index)
-
-
-
-
 # removing tail, start date is 2020-05-05
 df<-tail(df,-150)
 df<- data.matrix(df)
@@ -192,9 +182,6 @@ fit6 <- auto.arima(logCANNewcase[175:len], xreg=stringindex[175:len,c(1,7:8)], d
 fit7 <- auto.arima(logCANNewcase[175:len], xreg=stringindex[175:len,7], d=0)
 fit8 <- auto.arima(logCANNewcase[175:len], xreg=stringindex[175:len,7:8], d=0)
 
-
-fit4 <- auto.arima(df[15:len,1], xreg=stringindex[15:len,7:8], d=0)
-fit4
 # Compute Akaike Information Criteria
 AIC(fit1)
 AIC(fit2)
@@ -215,21 +202,34 @@ BIC(fit6)
 BIC(fit7)
 BIC(fit8)
 
-#Best fit (as per AIC and BIC) is with all data (1:2), so the final model becomes
-fit <- auto.arima(logCANNewcase[175:len], xreg=stringindex[175:len,1:2], d=0) # d is the order of first-differencing
+#Best fit (as per AIC and BIC) is with all data 1, so the final model becomes
+fit <- auto.arima(logCANNewcase[175:len], xreg=stringindex[175:len,1], d=0) # d is the order of first-differencing
 fit
 
 # forecast insurance quotes with advertising = 10
-fc10 <- forecast(fit, xreg=cbind(rep(10,20),c(Advert[40,1],rep(10,19))), h=20)
-plot(fc10, main="Forecast quotes with advertising set to 10", ylab="Quotes")
+fc <- forecast(fit, xreg=rep(66.2,14), h=14)
+plot(fc, main="Forecast cases with stringency set to 66.2", ylab="Cases Num")
 
 # see how forecasts with advertising = 8 will differ from advertising = 2
 par(mfrow=c(1,2))
-fc8 <- forecast(fit, xreg=cbind(rep(8,20),c(Advert[40,1],rep(8,19))), h=20)
-plot(fc8, main="Forecast quotes with advertising set to 8", ylab="Quotes")
+fc <- forecast(fit, xreg=rep(66.2,14), h=14)
+plot(fc, main="stringency set to 66.2", ylab="Cases Num")
 
-fc2 <- forecast(fit, xreg=cbind(rep(2,20),c(Advert[40,1],rep(2,19))), h=20)
-plot(fc2, main="Forecast quotes with advertising set to 2", ylab="Quotes")
+fc20 <- forecast(fit, xreg=rep(20,14), h=14)
+plot(fc20, main="stringency set to 20", ylab="Cases Num")
 
 
+# Plot the forecasting in the original scale
+fc$x <- exp(fc$x)
+fc$mean <- exp(fc$mean)
+fc$lower <- exp(fc$lower)
+fc$upper <- exp(fc$upper)
+autoplot(fc)
+checkresiduals(fc)
 
+
+fc20$x <- exp(fc20$x)
+fc20$mean <- exp(fc20$mean)
+fc20$lower <- exp(fc20$lower)
+fc20$upper <- exp(fc20$upper)
+autoplot(fc20)
